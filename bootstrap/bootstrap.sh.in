@@ -1,0 +1,216 @@
+#!/bin/bash
+#
+#   Bootstrapping script for mini2440. Download and build the toolchain and
+# auxiliary tools needed for emulation
+#
+# TODO: Should be split into different scripts : boot, build, etc.
+
+# Install script parameters
+INSTALL_SCRIPT=$(readlink -f $0)
+INSTALL_DIR=$(dirname $INSTALL_SCRIPT)
+TMP_DIR=$(readlink -f .tmp)
+
+# Buildroot download URL and default buildroot version
+BR_DL_URL=http://buildroot.uclibc.org/downloads
+BR_VERSION=2012.02
+
+# Flashimg (for NAND generation) and Qemu (for emulation)
+FLASHIMG_REPO=git://gitorious.org/flashimg/flashimg.git
+QEMU_REPO=git://repo.or.cz/qemu/mini2440.git
+
+# Initialize the binary location to default values
+[[ "x$FLASHIMG" = "x" ]] && FLASHIMG=$INSTALL_DIR/flashimg/flashimg
+[[ "x$QEMU" = "x" ]] && QEMU=$INSTALL_DIR/qemu/arm-softmmu/qemu-system-arm
+
+# Default action is to build everything
+MODE='full'
+
+# Pretty echoes :)
+B="\e[7m"
+E="\e[0m"
+
+# Parameters parsing
+while [ $# -gt 0 ]
+do
+    case $1 in
+        --mode)	 MODE=$2; shift;;
+        
+    	-d|--download|--downloads)
+    		export BUILDROOT_DL_DIR=$(readlink -f $2); shift;;
+        
+        --flashimg)	
+        	export FLASHIMG=$2; shift;;
+        	
+        --qemu)	
+        	export QEMU=$2; shift;;
+        
+        --build-flashimg)
+        	$0 --mode flashimg || exit 1
+        	exit 0;;
+        	
+        --build-qemu)
+        	$0 --mode qemu || exit 1
+        	exit 0;;
+        	
+        --extract)
+        	$0 --mode extract || exit 1
+        	exit 0;;
+        	
+        --buildroot)
+        	$0 --mode buildroot || exit 1
+        	exit 0;;
+        	
+        --update-nand)
+        	$0 --mode nand || exit 1
+        	exit 0;;
+        	
+        --make)
+        	$0 --mode make || exit 1
+        	exit 0;;
+        	
+        --boot)
+        	$0 --mode boot || exit 1
+        	exit 0;;
+
+        --*|-*) echo "Unrecognized option $1"; exit 1;;
+        *)      echo "Ignoring extra data '$1'";;
+    esac
+
+    shift
+done
+
+case $MODE in
+	full)
+		BEGIN=$(date +%s)
+		# Have to be check because we run a nand update at the end
+		if [ ! -f $FLASHIMG ]
+		then
+			$0 --build-flashimg || exit 1
+		fi
+		
+		if [ ! -f $QEMU ]
+		then
+			$0 --build-qemu || exit 1
+		fi
+		
+		[ "x$BUILDROOT_DL_DIR" != "x" ] && echo "Download dir: $BUILDROOT_DL_DIR"	 
+		echo "Using flashimg from $FLASHIMG"
+		echo "Using qemu from $QEMU"
+		
+		$0 --extract || exit 1
+		$0 --buildroot || exit 1
+		$0 --make || exit 1
+		
+		END=$(date +%s)
+		TOTALTIME=$(($END-$BEGIN))
+		
+		echo "Build time: $TOTALTIME"
+	;;
+	
+	make)
+		cd $INSTALL_DIR/buildroot
+		make || exit 1
+	;;
+	
+	nand)
+		if [ ! -f $FLASHIMG ]
+		then
+			echo "flashimg binary not found, build it with"
+			echo "    $0 --build-flashimg"
+			echo "or give its path with"
+			echo "    $0 --flashimg <path/to/flashimg>"
+			exit 1
+		fi
+		if [ ! -f $QEMU ]
+		then
+			echo "qemu-system-arm binary not found, build it with"
+			echo "    $0 --build-qemu"
+			echo "or give its path with"
+			echo "    $0 --qemu <path/to/flashimg>"
+			exit 1
+		fi
+	;;
+	
+	# Data extraction and buildroot installation
+	extract)
+		# Create the tmp dir if needed
+		[ ! -d $TMP_DIR ] && mkdir $TMP_DIR
+		[ ! -d $TMP_DIR/install_data ] && mkdir $TMP_DIR/install_data
+
+		# Create install dir if needed
+		[ ! -d $INSTALL_DIR ] && mkdir $INSTALL_DIR
+		[ ! -d $INSTALL_DIR/buildroot ] && mkdir $INSTALL_DIR/buildroot
+
+		# Extract data files
+		echo -e "${B}Extracting install data ... ${E}"
+		match=$(grep --text --line-number '^DATA:$' $INSTALL_SCRIPT | cut -d':' -f1)
+		start=$((match + 1))
+
+		tail -n +$start $INSTALL_SCRIPT | \
+			tar --strip-components=1 -C $TMP_DIR/install_data -xf - 
+	;;
+	
+	# Buildroot
+	buildroot)
+		if [ ! -f $TMP_DIR/buildroot-$BR_VERSION.tar.bz2 ]
+		then
+			echo -e "${B}Downloading buildroot ... ${E}"
+			wget $BR_DL_URL/buildroot-$BR_VERSION.tar.bz2 \
+				-O $TMP_DIR/buildroot-$BR_VERSION.tar.bz2
+				
+			[ $? -eq 0 ] || exit 1
+		fi
+
+		echo -e "${B}Extracting buildroot ... ${E}"
+		tar -C $INSTALL_DIR/buildroot --strip-components=1 \
+			-xf $TMP_DIR/buildroot-$BR_VERSION.tar.bz2
+			
+		[ $? -eq 0 ] || exit 1
+
+		# Copy files
+		echo -e "${B}Copying configuration files ... ${E}"
+		[ ! -d $INSTALL_DIR/buildroot/configs ] && mkdir $INSTALL_DIR/buildroot/configs
+		cp -v $TMP_DIR/install_data/*.cfg $INSTALL_DIR/buildroot/configs
+		cp -v $INSTALL_DIR/buildroot/configs/buildroot.cfg $INSTALL_DIR/buildroot/.config
+
+		echo -e "${B}Copying patches ... ${E}"
+		[ ! -d $INSTALL_DIR/buildroot/patches ] && mkdir $INSTALL_DIR/buildroot/patches
+		cp -v $TMP_DIR/install_data/*.patch $INSTALL_DIR/buildroot/patches
+		cp -v $TMP_DIR/install_data/uClibc/*.patch $INSTALL_DIR/buildroot/toolchain/uClibc
+	;;
+	
+	# Flashimg installation
+	flashimg)
+		echo -e "${B}Cloning flashimg repository ... ${E}"
+		git clone $FLASHIMG_REPO $INSTALL_DIR/flashimg
+		
+		echo -e "${B}Configuring flashimg ... ${E}"
+		cd $INSTALL_DIR/flashimg
+		./autogen.sh
+		./configure
+		
+		echo -e "${B}Building flashimg ... ${E}"
+		make || exit 1
+	;;	
+	
+	# Qemu installation
+	qemu)
+		$0 --mode extract
+		
+		echo -e "${B}Cloning qemu mini2440 repository ... ${E}"
+		git clone $QEMU_REPO $INSTALL_DIR/qemu
+		cd $INSTALL_DIR/qemu
+		
+		echo -e "${B}Applying patch ... ${E}"
+		patch -p1 -i $TMP_DIR/install_data/qemu-mini2440.patch || exit 1
+		
+		echo -e "${B}Configuring qemu ... ${E}"
+		./configure --target-list=arm-softmmu || exit 1
+		
+		echo -e "${B}Building qemu ... ${E}"
+		make -j2 || exit 1
+	;;
+esac
+
+## ~ End of the install script ~
+exit 0
