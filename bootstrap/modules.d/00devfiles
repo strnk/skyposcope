@@ -1,0 +1,22 @@
+#!/bin/bash
+case $1 in
+    pack-files)
+        add_to_archive "$CONFIG_DIR" "config"
+        add_to_archive "$SCRIPTS_DIR" "scripts"
+        add_to_archive "$BOOTSTRAP_DIR" "bootstrap"
+        ;;
+        
+    install)
+        create_dir $MINI2440_ROOT/config
+        create_dir $MINI2440_ROOT/scripts
+        create_dir $MINI2440_ROOT/bootstrap
+        
+        copy_data config $MINI2440_ROOT
+        copy_data scripts $MINI2440_ROOT
+        copy_data bootstrap $MINI2440_ROOT
+        
+        ln -s buildroot/output/host $MINI2440_ROOT/host
+        ln -s buildroot/output/images $MINI2440_ROOT/images
+        ln -s buildroot/output/target $MINI2440_ROOT/target
+        ;;
+esac

@@ -1,0 +1,71 @@
+#!/bin/bash
+
+MINI2440_ROOT=$(readlink -f .)
+ACTION="complete-bootstrap"
+INSTALL_MODULE=""
+
+while [ $# -gt 0 ]
+do
+    case $1 in
+        --root)      MINI2440_ROOT=$2; shift;;
+        --install)  
+            ACTION="install"; 
+            INSTALL_MODULE=$2; 
+            shift
+            ;;
+
+        --*|-*) echo "Unrecognized option $1"; exit 1;;
+        *)      echo "Ignoring extra data '$1'";;
+    esac
+
+    shift
+done
+
+# Generate hierarchy informations
+HOST_DIR=$MINI2440_ROOT/host
+TARGET_DIR=$MINI2440_ROOT/target
+IMAGES_DIR=$MINI2440_ROOT/images
+CONFIG_DIR=$MINI2440_ROOT/config
+SCRIPTS_DIR=$MINI2440_ROOT/scripts
+BOOTSTRAP_DIR=$MINI2440_ROOT/bootstrap
+
+export MINI2440_ROOT
+export HOST_DIR
+export TARGET_DIR
+export IMAGES_DIR
+export CONFIG_DIR
+export SCRIPTS_DIR
+export BOOTSTRAP_DIR
+
+# Check if the install dir exists
+if [ ! -d $MINI2440_ROOT ]
+then
+    echo "Directory $MINI2440_ROOT doesn't exists."
+    exit 1
+fi
+
+# Extract payload
+INSTALL_DATA=$(readlink -f $MINI2440_ROOT/.installdata)
+export INSTALL_DATA
+bootstrap_extract "$0" "$INSTALL_DATA"
+
+case $ACTION in
+    complete-bootstrap)
+        echo "Not yet implemented :)"
+        exit
+        ;;
+    
+    install)
+        fn="module_${INSTALL_MODULE}"
+        $fn install
+        exit 0
+        ;;
+        
+    *)
+        echo "I don't know how to do that."
+        exit 1
+        ;;
+esac
+
+# Cleaning up
+rm -rf $INSTALL_DATA

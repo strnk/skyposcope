@@ -1,0 +1,60 @@
+#!/bin/sh
+
+BOOTSTRAP_SCRIPTS=$BOOTSTRAP_DIR/scripts
+BOOTSTRAP_FUNCTIONS=$BOOTSTRAP_DIR/functions.d
+BOOTSTRAP_MODULES=$BOOTSTRAP_DIR/modules.d
+
+#
+# Bootstrap parameters
+#
+
+OUTPUT=$1
+ARCHIVE=test.tar.bz2
+
+
+# Canonicalize vars
+OUTPUT=$(readlink -f $OUTPUT)
+ARCHIVE=$(readlink -f $ARCHIVE)
+
+export BOOTSTRAP_DIR
+export BOOTSTRAP_SCRIPTS
+export BOOTSTRAP_FUNCTIONS
+export BOOTSTRAP_MODULES
+export ARCHIVE
+
+
+#
+# Bootstrap script creation
+#
+
+# Generate the payload
+[ -f $ARCHIVE ] && rm $ARCHIVE
+$BOOTSTRAP_SCRIPTS/pack 
+
+# Shebang
+echo "#!/bin/bash" > $OUTPUT
+
+# Generate module functions
+for moduleFile in `ls -1 $BOOTSTRAP_MODULES`
+do
+    moduleName=`echo $moduleFile | sed "s/^[0-9]*//"`
+    echo "function module_${moduleName} {" >> $OUTPUT
+    tail -n +2 $BOOTSTRAP_MODULES/$moduleFile >> $OUTPUT
+    echo "}\n\n" >> $OUTPUT
+done
+
+# Add source scripts
+for bootstrapScript in `ls -1 $BOOTSTRAP_FUNCTIONS` 
+do
+    tail -n +2 $BOOTSTRAP_FUNCTIONS/$bootstrapScript >> $OUTPUT
+done
+
+# Exit the shell script to prevent payload execution
+echo "exit 0" >> $OUTPUT
+
+# Payload data to embed
+echo 'DATA:' >> $OUTPUT
+cat $ARCHIVE >> $OUTPUT
+
+chmod a+x $OUTPUT
+rm $ARCHIVE

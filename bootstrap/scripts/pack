@@ -1,0 +1,31 @@
+#!/bin/bash
+
+## add_to_archive
+# $1 : abs. path to the file/directory
+# $2 : name in the archive
+#
+function add_to_archive {
+    a=$(basename $ARCHIVE)
+    tar rPf $ARCHIVE --exclude="$a" --transform "s#$1#$2#" $1
+}
+
+## git_patch_to_archive
+# $1 : abs. path to a git repo.
+# $2 : name of the patch
+#
+function git_patch_to_archive {
+    tmpFile=`tempfile`
+    git --git-dir $1/.git/ --work-tree $1 diff > $tmpFile
+    add_to_archive $tmpFile $2
+    rm $tmpFile
+}
+
+export -f add_to_archive
+export -f git_patch_to_archive
+
+
+for fileScript in `find $BOOTSTRAP_MODULES -executable -type f` 
+do
+    echo "Processing data from $fileScript"
+    $fileScript pack-files
+done
