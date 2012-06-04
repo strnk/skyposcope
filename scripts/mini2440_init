@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [[ ! -f $CONFIG_DIR/board.cfg ]]
+then
+    echo "Board config file $CONFIG_DIR/board.cfg not found."
+    return 1
+fi
+
+source $CONFIG_DIR/board.cfg

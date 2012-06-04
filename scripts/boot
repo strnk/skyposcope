@@ -1,0 +1,113 @@
+#!/bin/bash
+
+source `which mini2440_init` || exit 1
+
+
+# Default parameters
+BOOT='nand'
+QEMU_ARM=`which qemu-system-arm`
+
+NOR_FILE=$IMAGES_DIR/nor.bin
+NAND_FILE=$IMAGES_DIR/nand.bin
+SD_FILE=$IMAGES_DIR/sd_card.bin
+
+EMUL_NOR=1
+EMUL_NAND=1
+EMUL_SD=1
+
+# Parameters parsing
+while [ $# -gt 0 ]
+do
+    case $1 in
+        --no-nand)      EMUL_NAND=0;;
+        --no-nor)       EMUL_NOR=0;;
+        --no-sd)        EMUL_SD=0;;
+
+        --nand)         NAND_FILE=$2; shift;;
+        --nor)          NOR_FILE=$2; shift;;
+        --sd)           SD_FILE=$2; shift;;
+
+        --boot-nand|-1)  BOOT='nand';;
+        --boot-nor|-2)   BOOT='nor';;
+        
+        --qemu)         QEMU_ARM=$2; shift;;
+
+        --*|-*) echo "Unrecognized option $1"; exit 1;;
+        *)      echo "Ignoring extra data '$1'";;
+    esac
+
+    shift
+done
+
+
+## Parameters check
+COMMANDLINE=''
+
+# Qemu binary
+if [ ! -f "$QEMU_ARM" ]
+then
+    if [ -z $QEMU_ARM ]
+    then
+        echo "Qemu (qemu-system-arm) was not found in the PATH. " \
+            "Use the --qemu <path> to indicate the binary location."
+        exit 1
+    else
+        echo "Could not find qemu binary '$QEMU_ARM'."
+        exit 1
+    fi
+fi
+
+# NOR file
+if [ $EMUL_NOR -eq 1 ]
+then
+    if [ ! -f $NOR_FILE ]
+    then
+        echo "Missing NOR image file '$NOR_FILE'."
+        exit 1
+    fi
+
+    COMMANDLINE="$COMMANDLINE -pflash $NOR_FILE"
+fi
+
+# NAND file
+if [ $EMUL_NAND -eq 1 ]
+then
+    if [ ! -f $NAND_FILE ]
+    then
+        echo "Missing NAND image file '$NAND_FILE'."
+        exit 1
+    fi
+
+    COMMANDLINE="$COMMANDLINE -mtdblock $NAND_FILE"
+fi
+
+# SD file
+if [ $EMUL_SD -eq 1 ]
+then
+    if [ ! -f $SD_FILE ]
+    then
+        echo "Missing SD card image file '$SD_FILE'."
+        exit 1
+    fi
+
+    COMMANDLINE="$COMMANDLINE -sd $SD_FILE"
+fi
+
+# NAND + boot on nand requested
+if [ $BOOT = 'nand' -a $EMUL_NAND -ne 1 ]
+then
+    echo "Cannot boot on NAND without enabling the NAND ..."
+    exit 1
+fi
+
+# NOR + boot on nor requested
+if [ $BOOT = 'nor' -a $EMUL_NOR -ne 1 ]
+then
+    echo "Cannot boot on NOR without enabling the NOR ..."
+    exit 1
+fi
+
+MINI2440_BOOT=$BOOT $QEMU_ARM -M mini2440 -m 128m -serial stdio \
+     $COMMANDLINE \
+    -show-cursor \
+    -usb -usbdevice keyboard -usbdevice mouse
