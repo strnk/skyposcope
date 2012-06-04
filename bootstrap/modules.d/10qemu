@@ -4,7 +4,13 @@ QEMU_REPO=git://repo.or.cz/qemu/mini2440.git
 
 case $1 in
     pack-files)
-        git_patch_to_archive $QEMU_SRC_DIR qemu-custom.patch
+        # This is the bootstrap-from-sources mode
+        if [ -d $MINI2440_ROOT/source ]
+        then
+            add_to_archive $MINI2440_ROOT/source/qemu/qemu-custom.patch qemu-custom.patch
+        else
+            git_patch_to_archive $QEMU_SRC_DIR qemu-custom.patch
+        fi
         ;;
         
     install)

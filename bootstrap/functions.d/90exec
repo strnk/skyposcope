@@ -3,6 +3,7 @@
 MINI2440_ROOT=$(readlink -f .)
 ACTION="complete-bootstrap"
 INSTALL_MODULE=""
+EXTRACT_LOCATION="."
 
 while [ $# -gt 0 ]
 do
@@ -11,6 +12,12 @@ do
         --install)  
             ACTION="install"; 
             INSTALL_MODULE=$2; 
+            shift
+            ;;
+            
+        --extract-data)
+            ACTION="extract";
+            EXTRACT_LOCATION=$2;
             shift
             ;;
 
@@ -49,7 +56,6 @@ fi
 # Extract payload
 INSTALL_DATA=$(readlink -f $MINI2440_ROOT/.installdata)
 export INSTALL_DATA
-bootstrap_extract "$0" "$INSTALL_DATA"
 
 case $ACTION in
     complete-bootstrap)
@@ -58,9 +64,21 @@ case $ACTION in
         ;;
     
     install)
+        bootstrap_extract "$0" "$INSTALL_DATA"
         fn="module_${INSTALL_MODULE}"
         $fn install
+        rm -rf $INSTALL_DATA
         exit 0
+        ;;
+        
+    extract)
+        if [ ! -d $EXTRACT_LOCATION ]
+        then
+            echo "$EXTRACT_LOCATION is not a directory."
+            exit 1
+        fi
+        
+        bootstrap_extract "$0" $(readlink -f $EXTRACT_LOCATION)
         ;;
         
     *)
@@ -70,4 +88,3 @@ case $ACTION in
 esac
 
 # Cleaning up
-rm -rf $INSTALL_DATA

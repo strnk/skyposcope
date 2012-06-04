@@ -4,7 +4,6 @@ FLASHIMG_REPO=git://gitorious.org/flashimg/flashimg.git
 
 case $1 in
     pack-files)
-        git_patch_to_archive $FLASHIMG_SRC_DIR qemu-custom.patch
         ;;
         
     install)
