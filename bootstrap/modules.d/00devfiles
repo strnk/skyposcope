@@ -7,9 +7,9 @@ case $1 in
         ;;
         
     install)
-        create_dir $MINI2440_ROOT/config
-        create_dir $MINI2440_ROOT/scripts
-        create_dir $MINI2440_ROOT/bootstrap
+        create_dir $CONFIG_DIR
+        create_dir $SCRIPTS_DIR
+        create_dir $BOOTSTRAP_DIR
         
         copy_data config $MINI2440_ROOT
         copy_data scripts $MINI2440_ROOT

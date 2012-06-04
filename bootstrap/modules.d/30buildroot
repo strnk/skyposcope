@@ -1,8 +1,51 @@
 #!/bin/bash
+BUILDROOT_DL_URL=http://buildroot.uclibc.org/downloads
+BUILDROOT_VERSION=2012.02
+
 case $1 in
     pack-files)
+        for patch in `ls -1 $BUILDROOT_DIR/patches/*`
+        do
+            add_to_archive $patch patches/
+        done
+        
+        for uClibcPatch in `ls -1 $BUILDROOT_DIR/toolchain/uClibc/uClibc-0.9.33*`
+        do
+            add_to_archive $uClibcPatch patches/uClibc/
+        done
+        
+        for brConfig in `ls -1 $BUILDROOT_DIR/configs/*.cfg`
+        do
+            add_to_archive $brConfig buildroot_configs/
+        done
         ;;
         
-    install)
+    install)		
+        if [ ! -f $INSTALL_DATA/buildroot-$BUILDROOT_VERSION.tar.bz2 ]
+		then
+			pecho "Downloading buildroot ..."
+			wget $BUILDROOT_DL_URL/buildroot-$BUILDROOT_VERSION.tar.bz2 \
+				-O $INSTALL_DATA/buildroot-$BUILDROOT_VERSION.tar.bz2
+
+			[ $? -eq 0 ] || exit 1
+		fi
+
+		pecho "Extracting buildroot ... "
+        create_dir $BUILDROOT_DIR
+		tar -C $BUILDROOT_DIR --strip-components=1 \
+			-xf $INSTALL_DATA/buildroot-$BUILDROOT_VERSION.tar.bz2
+
+		[ $? -eq 0 ] || exit 1
+
+		# Copy files
+		pecho "Copying configuration files ... "
+        create_dir $BUILDROOT_DIR/configs
+		cp -v $INSTALL_DATA/buildroot_configs/*.cfg $BUILDROOT_DIR/configs
+		cp -v $BUILDROOT_DIR/configs/buildroot.cfg $BUILDROOT_DIR/.config
+
+		pecho "Copying patches ... "
+        create_dir $BUILDROOT_DIR/patches
+		cp -v $INSTALL_DATA/patches/*.patch $BUILDROOT_DIR/patches
+		cp -v $INSTALL_DATA/patches/uClibc/*.patch $BUILDROOT_DIR/toolchain/uClibc
         ;;
 esac

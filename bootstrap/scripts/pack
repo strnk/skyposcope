@@ -6,7 +6,15 @@
 #
 function add_to_archive {
     a=$(basename $ARCHIVE)
-    tar rPf $ARCHIVE --exclude="$a" --transform "s#$1#$2#" $1
+    f=$(basename $1)
+    
+    # Are we trying to copy a file in a dir ?
+    if [  -f $1 -a  "$2" != "${2%/}" ]
+    then
+        tar rPf $ARCHIVE --exclude="$a" --transform "s#$1#$2$f#" $1
+    else
+        tar rPf $ARCHIVE --exclude="$a" --transform "s#$1#$2#" $1
+    fi
 }
 
 ## git_patch_to_archive

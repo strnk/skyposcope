@@ -28,6 +28,7 @@ IMAGES_DIR=$MINI2440_ROOT/images
 CONFIG_DIR=$MINI2440_ROOT/config
 SCRIPTS_DIR=$MINI2440_ROOT/scripts
 BOOTSTRAP_DIR=$MINI2440_ROOT/bootstrap
+BUILDROOT_DIR=$MINI2440_ROOT/buildroot
 
 export MINI2440_ROOT
 export HOST_DIR
@@ -36,6 +37,7 @@ export IMAGES_DIR
 export CONFIG_DIR
 export SCRIPTS_DIR
 export BOOTSTRAP_DIR
+export BUILDROOT_DIR
 
 # Check if the install dir exists
 if [ ! -d $MINI2440_ROOT ]
