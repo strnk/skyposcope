@@ -1,0 +1,32 @@
+#!/bin/bash
+
+THIS_SCRIPT=$(readlink -nf $0)
+THIS_SCRIPT_DIR=$(dirname $THIS_SCRIPT)
+
+
+# Various directories
+MINI2440_ROOT=$(readlink -nf $THIS_SCRIPT_DIR/..)
+HOST_DIR=$MINI2440_ROOT/host
+TARGET_DIR=$MINI2440_ROOT/target
+IMAGES_DIR=$MINI2440_ROOT/images
+CONFIG_DIR=$MINI2440_ROOT/config
+SCRIPTS_DIR=$MINI2440_ROOT/scripts
+BOOTSTRAP_DIR=$MINI2440_ROOT/bootstrap
+BUILDROOT_DIR=$MINI2440_ROOT/buildroot
+
+export MINI2440_ROOT
+export HOST_DIR
+export TARGET_DIR
+export IMAGES_DIR
+export CONFIG_DIR
+export SCRIPTS_DIR
+export BOOTSTRAP_DIR
+export BUILDROOT_DIR
+
+
+# Enter the dev. shell
+cd $MINI2440_ROOT
+echo "You are now in a mini2440 development shell, type exit or press CTRL+D to exit"
+/bin/bash --rcfile $CONFIG_DIR/mini2440rc
+echo "End of mini2440 development shell."
+cd $OLDPWD

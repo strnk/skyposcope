@@ -1,0 +1,31 @@
+From f94086fbc258a051476dfb2e63314236954e4ea9 Mon Sep 17 00:00:00 2001
+From: Mike Frysinger <vapier@gentoo.org>
+Date: Tue, 27 Mar 2012 02:13:11 +0000
+Subject: arm: disable ioperm/iopl stubs
+
+ARM always provides its own userspace funcs for ioperm/iopl.
+They've never had syscalls.  So disable the stubs on ARM to
+avoid multiple definition errors.
+
+Signed-off-by: Mike Frysinger <vapier@gentoo.org>
+---
+diff --git a/libc/sysdeps/linux/common/stubs.c b/libc/sysdeps/linux/common/stubs.c
+index 02cd724..dd1a8d1 100644
+--- a/libc/sysdeps/linux/common/stubs.c
++++ b/libc/sysdeps/linux/common/stubs.c
+@@ -173,11 +173,11 @@ make_stub(inotify_add_watch)
+ make_stub(inotify_rm_watch)
+ #endif
+ 
+-#if !defined __NR_ioperm && defined __UCLIBC_LINUX_SPECIFIC__
++#if !defined __NR_ioperm && defined __UCLIBC_LINUX_SPECIFIC__ && !defined __arm__
+ make_stub(ioperm)
+ #endif
+ 
+-#if !defined __NR_iopl && defined __UCLIBC_LINUX_SPECIFIC__
++#if !defined __NR_iopl && defined __UCLIBC_LINUX_SPECIFIC__ && !defined __arm__
+ make_stub(iopl)
+ #endif
+ 
+--
+cgit v0.9.0.1-2-gef13

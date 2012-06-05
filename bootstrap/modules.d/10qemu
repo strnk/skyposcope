@@ -1,0 +1,29 @@
+#!/bin/bash
+QEMU_SRC_DIR=$MINI2440_ROOT/qemu
+QEMU_REPO=git://repo.or.cz/qemu/mini2440.git
+
+case $1 in
+    pack-files)
+        # This is the bootstrap-from-sources mode
+        if [ -d $MINI2440_ROOT/source ]
+        then
+            add_to_archive $MINI2440_ROOT/source/qemu/qemu-custom.patch qemu-custom.patch
+        else
+            git_patch_to_archive $QEMU_SRC_DIR qemu-custom.patch
+        fi
+        ;;
+        
+    install)
+        git clone $QEMU_REPO $QEMU_SRC_DIR
+        cd $QEMU_SRC_DIR
+        
+        pecho "Applying patch ..."
+		patch -p1 -i $BOOTSTRAP_DATA/qemu-custom.patch || exit 1
+		
+        pecho "Configuring qemu ... "
+		./configure --target-list=arm-softmmu
+		
+		pecho "Building qemu ... "
+		make -j2 || exit 1
+		;;
+esac

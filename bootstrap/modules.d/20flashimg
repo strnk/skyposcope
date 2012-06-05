@@ -1,0 +1,20 @@
+#!/bin/bash
+FLASHIMG_SRC_DIR=$MINI2440_ROOT/flashimg
+FLASHIMG_REPO=git://gitorious.org/flashimg/flashimg.git
+
+case $1 in
+    pack-files)
+        ;;
+        
+    install)
+        git clone $FLASHIMG_REPO $FLASHIMG_SRC_DIR
+        
+        pecho "Configuring flashimg ... "
+        cd $FLASHIMG_SRC_DIR
+		./autogen.sh
+		./configure
+		
+		pecho "Building flashimg ... "
+		make || exit 1
+        ;;
+esac

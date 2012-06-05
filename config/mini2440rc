@@ -1,0 +1,9 @@
+#!/bin/bash
+# mini2440rc : executed when entering a mini2440 development shell
+#
+
+# User's .bashrc
+[ -f ~/.bashrc ] && source ~/.bashrc
+
+# Add our binaries to the path
+export PATH=$SCRIPTS_DIR:$HOST_DIR/usr/bin:$MINI2440_ROOT/qemu/arm-softmmu/:$MINI2440_ROOT/flashimg/:$PATH

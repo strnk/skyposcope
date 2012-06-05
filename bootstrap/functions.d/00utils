@@ -1,0 +1,20 @@
+#!/bin/bash
+
+## pecho
+# $1 : text to display
+#
+function pecho {
+    echo -e "\e[7m$@\e[0m"
+}
+
+
+function create_dir {
+    [ ! -d "$@" ] && mkdir "$@"
+}
+
+function copy_data {
+    cp -rv "$BOOTSTRAP_DATA/$1" "$2"
+}
+
+export -f pecho
+export -f create_dir

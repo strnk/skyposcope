@@ -1,0 +1,221 @@
+diff --git a/hw/mini2440.c b/hw/mini2440.c
+index 40edb06..669a540 100644
+--- a/hw/mini2440.c
++++ b/hw/mini2440.c
+@@ -48,6 +48,8 @@ struct mini2440_board_s {
+     const char * kernel;
+     SDState * mmc;
+     NANDFlashState *nand;
++    uint16_t nand_page_size;
++    uint16_t nand_oob_size;
+     pflash_t * nor;
+     int bl_level;
+     int boot_mode;
+@@ -238,27 +240,38 @@ static void hexdump(const void* address, uint32_t len)
+ }
+ #endif
+ 
+-static int mini2440_load_from_nand(NANDFlashState *nand,
+-		uint32_t nand_offset, uint32_t s3c_base_offset, uint32_t size)
++static int mini2440_load_from_nand(struct mini2440_board_s *s, 
++        uint32_t nand_offset, uint32_t s3c_base_offset, uint32_t size)
+ {
+-	uint8_t buffer[512];
++	uint8_t *buffer;
+ 	uint32_t src = 0;
+ 	int page = 0;
+ 	uint32_t dst = 0;
+-
+-	if (!nand)
++	
++	if (!s || !s->nand)
+ 		return 0;
+-
+-	for (page = 0; page < (size / 512); page++, src += 512 + 16, dst += 512) {
+-		if (nand_readraw(nand, nand_offset + src, buffer, 512)) {
+-			cpu_physical_memory_write(s3c_base_offset + dst, buffer, 512);
+-		} else {
+-			mini2440_printf("failed to load nand %d:%d\n",
+-			        nand_offset + src, 512 + 16);
+-			return 0;
+-		}
+-	}
+-	return (int) size;
++		
++	mini2440_printf("loading nand w/ page_size %d and oob_size %d\n",
++	    s->nand_page_size, s->nand_oob_size);
++	    
++    buffer = malloc(s->nand_page_size * sizeof(uint8_t));
++    if (buffer == NULL)
++        return 0;
++        
++    for (page = 0; page < (size / s->nand_page_size); page++, 
++        src += s->nand_page_size + s->nand_oob_size, dst += s->nand_page_size) {
++	    if (nand_readraw(s->nand, nand_offset + src, buffer, s->nand_page_size)) {
++		    cpu_physical_memory_write(s3c_base_offset + dst, buffer, s->nand_page_size);
++	    } else {
++		    mini2440_printf("failed to load nand %d:%d\n",
++		            nand_offset + src, s->nand_page_size + s->nand_oob_size);
++            free(buffer);
++		    return 0;
++	    }
++    }
++    
++    free(buffer);
++    return (int) size;
+ }
+ 
+ static void mini2440_reset(void *opaque)
+@@ -274,7 +287,7 @@ static void mini2440_reset(void *opaque)
+ 		 * it is not working perfectly as expected, so we cheat and load
+ 		 * it from nand directly relocated to 0x33f80000 and jump there
+ 		 */
+-		if (mini2440_load_from_nand(s->nand, 0, S3C_RAM_BASE | 0x03f80000, 256*1024)> 0) {
++		if (mini2440_load_from_nand(s, 0, S3C_RAM_BASE | 0x03f80000, 256*1024)> 0) {
+ 			mini2440_printf("loaded default u-boot from NAND\n");
+ 			s->cpu->env->regs[15] = S3C_RAM_BASE | 0x03f80000; /* start address, u-boot already relocated */
+ 		}
+@@ -300,6 +313,7 @@ static void mini2440_reset(void *opaque)
+ 			}
+ 		}
+ 	}
++	
+ 	/*
+ 	 * if a kernel was explicitly specified, we load it too
+ 	 */
+@@ -360,11 +374,11 @@ mini2440_init(
+     		} else
+     		    mini->boot_mode = BOOT_NOR;
+     	} else if (!strcasecmp(boot_mode, "nand")) {
+-    		if (nor_idx < 0) {
++    		if (nand_idx < 0) {
+     			printf("%s MINI2440_BOOT(nand) error, no flash file specified", __func__);
+     			abort();
+     		} else
+-    		    mini->boot_mode = BOOT_NOR;
++    		    mini->boot_mode = BOOT_NAND;
+     	} else
+ 			printf("%s MINI2440_BOOT(%s) ignored, invalid value", __func__, boot_mode);
+     }
+@@ -377,9 +391,18 @@ mini2440_init(
+     	    switch (size) {
+     	    	case 2 * 65536 * (512 + 16):
+ 					nand_cid = 0x76;
++					
++					/* Could be cleaner by fetching the page and oob size
++					from the NANDFlashState page_shift and oob_shift but the
++					structure is not resolved from here */
++					mini->nand_page_size = 512;
++					mini->nand_oob_size = 16;
+     	    		break;
+     	    	case 4 * 65536 * (512 + 16):
+     	    		nand_cid = 0xf1;
++    	    		
++					mini->nand_page_size = 2048;
++					mini->nand_oob_size = 64;
+ 					break;
+     	    	default:
+     	    		printf("%s: Unknown NAND size/id %d (%dMB) defaulting to old 64MB\n",
+diff --git a/hw/s3c2410.c b/hw/s3c2410.c
+index d1e4c92..d5582c6 100644
+--- a/hw/s3c2410.c
++++ b/hw/s3c2410.c
+@@ -1574,6 +1574,7 @@ struct s3c_adc_state_s {
+     int in_idx;
+     int noise;
+     int scale[6];
++    int event;
+ 
+     uint16_t control;
+     uint16_t ts;
+@@ -1589,6 +1590,7 @@ static void s3c_adc_reset(struct s3c_adc_state_s *s)
+     s->ts = 0x58;
+     s->delay = 0xff;
+     s->enable = 1;
++    s->event = 0;
+ }
+ 
+ static void s3c_adc_start(struct s3c_adc_state_s *s)
+@@ -1613,7 +1615,7 @@ static void s3c_adc_tick(void *opaque)
+     struct s3c_adc_state_s *s = (struct s3c_adc_state_s *) opaque;
+     int sx, sy;
+ 
+-    if (s->down) {
++    if (s->event != 0 || s->down) {
+         if ((s->ts & 3) == 3 && s->enable)
+             qemu_irq_raise(s->tcirq);
+         else if (s->enable && ((s->ts & (1 << 2)) || (s->ts & 3))) {
+@@ -1636,6 +1638,12 @@ static void s3c_adc_event(void *opaque,
+                 int x, int y, int z, int buttons_state)
+ {
+     struct s3c_adc_state_s *s = (struct s3c_adc_state_s *) opaque;
++    
++    	if (!!buttons_state)
++			s->event |= 0x00000001;
++	  	else
++			s->event |= 0x00000002;
++  	
+     s->down = !!buttons_state;
+     s->x = x;
+     s->y = y;
+@@ -1647,6 +1655,7 @@ static void s3c_adc_event(void *opaque,
+ #define S3C_ADCDLY	0x08	/* ADC Start or Interval Delay register */
+ #define S3C_ADCDAT0	0x0c	/* ADC Conversion Data register 0 */
+ #define S3C_ADCDAT1	0x10	/* ADC Conversion Data register 1 */
++#define S3C_ADCUPDN	0x14	/* ADC touch screen up/down int check register */
+ 
+ static uint32_t s3c_adc_read(void *opaque, target_phys_addr_t addr)
+ {
+@@ -1665,6 +1674,10 @@ static uint32_t s3c_adc_read(void *opaque, target_phys_addr_t addr)
+         return ((!s->down) << 15) | s->xdata;
+     case S3C_ADCDAT1:
+         return ((!s->down) << 15) | s->ydata;
++        
++    case S3C_ADCUPDN:
++    	return s->event;
++    	
+     default:
+         printf("%s: Bad register 0x%lx\n", __FUNCTION__, (unsigned long)addr);
+         break;
+@@ -1695,6 +1708,10 @@ static void s3c_adc_write(void *opaque, target_phys_addr_t addr,
+     case S3C_ADCDLY:
+         s->delay = value & 0xffff;
+         break;
++        
++    case S3C_ADCUPDN:
++    	s->event = value & 0x3;
++    	break;
+ 
+     default:
+         printf("%s: Bad register 0x%lx\n", __FUNCTION__, (unsigned long)addr);
+diff --git a/hw/s3c2440_nand.c b/hw/s3c2440_nand.c
+index d727fbb..41f00a4 100644
+--- a/hw/s3c2440_nand.c
++++ b/hw/s3c2440_nand.c
+@@ -124,9 +124,14 @@ static uint32_t s3c2440_nand_read(void *opaque, target_phys_addr_t addr)
+     case S3C_NFSTAT:
+         nand_getpins(s->nand, &rb);
+         return rb;
++        
++    case S3C_NFMECC0 + 3:
+     case S3C_NFMECCD0 + 3: shr += 8;
++    case S3C_NFMECC0 + 2:
+     case S3C_NFMECCD0 + 2: shr += 8;
++    case S3C_NFMECC0 + 1:
+     case S3C_NFMECCD0 + 1: shr += 8;
++    case S3C_NFMECC0:
+     case S3C_NFMECCD0: {
+ #define ECC(shr, b, shl)	((s->nfecc.lp[b] << (shl - shr)) & (1 << shl))
+         uint32 ecc = ~(
+diff --git a/sdl.c b/sdl.c
+index 178b553..bdf412b 100644
+--- a/sdl.c
++++ b/sdl.c
+@@ -445,6 +445,7 @@ static void sdl_grab_end(void)
+ static void sdl_send_mouse_event(int dx, int dy, int dz, int x, int y, int state)
+ {
+     int buttons;
++    if(width==1 && height==1) return;
+     buttons = 0;
+     if (state & SDL_BUTTON(SDL_BUTTON_LEFT))
+         buttons |= MOUSE_EVENT_LBUTTON;

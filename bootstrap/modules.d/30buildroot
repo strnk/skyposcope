@@ -1,0 +1,78 @@
+#!/bin/bash
+BUILDROOT_DL_URL=http://buildroot.uclibc.org/downloads
+BUILDROOT_VERSION=2012.02
+
+case $1 in
+    pack-files)
+        # This is the bootstrap-from-sources mode
+        if [ -d $MINI2440_ROOT/source ]
+        then
+            echo "Bootstrapping from source"
+            for patch in `ls -1 $MINI2440_ROOT/source/patches/*.patch`
+            do
+                add_to_archive $patch patches/
+            done
+            
+            for uClibcPatch in `ls -1 $MINI2440_ROOT/source/patches/uClibc/*.patch`
+            do
+                add_to_archive $uClibcPatch patches/uClibc/
+            done
+            
+            for brConfig in `ls -1 $MINI2440_ROOT/source/configs/*.cfg`
+            do
+                add_to_archive $brConfig buildroot_configs/
+            done        
+        else
+            for patch in `ls -1 $BUILDROOT_DIR/patches/*`
+            do
+                add_to_archive $patch patches/
+            done
+            
+            for uClibcPatch in `ls -1 $BUILDROOT_DIR/toolchain/uClibc/uClibc-0.9.33*`
+            do
+                add_to_archive $uClibcPatch patches/uClibc/
+            done
+            
+            for brConfig in `ls -1 $BUILDROOT_DIR/configs/*.cfg`
+            do
+                add_to_archive $brConfig buildroot_configs/
+            done
+        fi
+        ;;
+        
+    install)
+        export BUILDROOT_DL_DIR=$DOWNLOAD_DIR
+        
+        [[ ! -d $BUILDROOT_DL_DIR ]] && mkdir $BUILDROOT_DL_DIR
+        
+        if [ ! -f $BUILDROOT_DL_DIR/buildroot-$BUILDROOT_VERSION.tar.bz2 ]
+		then
+			pecho "Downloading buildroot ..."
+			wget $BUILDROOT_DL_URL/buildroot-$BUILDROOT_VERSION.tar.bz2 \
+				-O $BUILDROOT_DL_DIR/buildroot-$BUILDROOT_VERSION.tar.bz2
+
+			[ $? -eq 0 ] || exit 1
+		fi
+
+		pecho "Extracting buildroot ... "
+        create_dir $BUILDROOT_DIR
+		tar -C $BUILDROOT_DIR --strip-components=1 \
+			-xf $BUILDROOT_DL_DIR/buildroot-$BUILDROOT_VERSION.tar.bz2
+
+		[ $? -eq 0 ] || exit 1
+		
+		# Copy files
+		pecho "Copying configuration files ... "
+        create_dir $BUILDROOT_DIR/configs
+		cp -v $BOOTSTRAP_DATA/buildroot_configs/*.cfg $BUILDROOT_DIR/configs
+		cp -v $BUILDROOT_DIR/configs/buildroot.cfg $BUILDROOT_DIR/.config
+
+		pecho "Copying patches ... "
+        create_dir $BUILDROOT_DIR/patches
+		cp -v $BOOTSTRAP_DATA/patches/*.patch $BUILDROOT_DIR/patches
+		cp -v $BOOTSTRAP_DATA/patches/uClibc/*.patch $BUILDROOT_DIR/toolchain/uClibc
+		
+		cd $BUILDROOT_DIR
+		make
+        ;;
+esac

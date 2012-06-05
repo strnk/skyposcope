@@ -1,0 +1,45 @@
+#!/bin/bash
+
+## add_to_archive
+# $1 : abs. path to the file/directory
+# $2 : name in the archive
+#
+function add_to_archive {
+    a=$(basename $ARCHIVE)
+    f=$(basename $1)
+    
+    # Are we trying to copy a file in a dir ?
+    if [  -f $1 -a  "$2" != "${2%/}" ]
+    then
+        tar rPf $ARCHIVE --exclude="$a" --transform "s#$1#$2$f#" $1
+    else
+        tar rPf $ARCHIVE --exclude="$a" --transform "s#$1#$2#" $1
+    fi
+}
+
+## git_patch_to_archive
+# $1 : abs. path to a git repo.
+# $2 : name of the patch
+#
+function git_patch_to_archive {
+    tmpFile=`tempfile`
+    git --git-dir $1/.git/ --work-tree $1 diff > $tmpFile
+    add_to_archive $tmpFile $2
+    rm $tmpFile
+}
+
+export -f add_to_archive
+export -f git_patch_to_archive
+
+
+for fileScript in `find $BOOTSTRAP_MODULES -executable -type f | sort` 
+do
+    echo -n "    $(basename $fileScript) ... "
+    $fileScript pack-files
+    
+    if [[ $? -eq 0 ]]; then
+        echo "ok."
+    else
+        echo "error !"
+    fi
+done

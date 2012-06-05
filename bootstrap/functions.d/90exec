@@ -1,0 +1,115 @@
+#!/bin/bash
+
+MINI2440_ROOT=$(readlink -f .)
+ACTION="complete-bootstrap"
+INSTALL_MODULE=""
+EXTRACT_LOCATION="."
+
+while [ $# -gt 0 ]
+do
+    case $1 in
+        --root)      MINI2440_ROOT=$2; shift;;
+        --install)  
+            ACTION="install"; 
+            INSTALL_MODULE=$2; 
+            shift
+            ;;
+            
+        --extract-data)
+            ACTION="extract";
+            EXTRACT_LOCATION=$2;
+            shift
+            ;;
+            
+        --list-modules)
+            ACTION="list-modules"
+            ;;
+
+        --*|-*) echo "Unrecognized option $1"; exit 1;;
+        *)      echo "Ignoring extra data '$1'";;
+    esac
+
+    shift
+done
+
+# Generate hierarchy informations
+HOST_DIR=$MINI2440_ROOT/host
+TARGET_DIR=$MINI2440_ROOT/target
+IMAGES_DIR=$MINI2440_ROOT/images
+CONFIG_DIR=$MINI2440_ROOT/config
+SCRIPTS_DIR=$MINI2440_ROOT/scripts
+BOOTSTRAP_DIR=$MINI2440_ROOT/bootstrap
+BUILDROOT_DIR=$MINI2440_ROOT/buildroot
+DOWNLOAD_DIR=$MINI2440_ROOT/download
+
+export MINI2440_ROOT
+export HOST_DIR
+export TARGET_DIR
+export IMAGES_DIR
+export CONFIG_DIR
+export SCRIPTS_DIR
+export BOOTSTRAP_DIR
+export BUILDROOT_DIR
+export DOWNLOAD_DIR
+
+# Check if the install dir exists
+if [ ! -d $MINI2440_ROOT ]
+then
+    echo "Directory $MINI2440_ROOT doesn't exists."
+    exit 1
+fi
+
+# Extract payload
+BOOTSTRAP_DATA=$(readlink -f $MINI2440_ROOT/.bootstrapdata)
+export BOOTSTRAP_DATA
+
+case $ACTION in
+    complete-bootstrap)
+		BEGIN=$(date +%s)
+        bootstrap_extract "$0" "$BOOTSTRAP_DATA"
+        
+        for module in $BOOTSTRAP_MODULES
+        do
+            pecho "Processing module $module"
+            fn="module_${module}"
+            $fn install
+        done
+        
+        rm -rf $BOOTSTRAP_DATA
+        
+		END=$(date +%s)
+		TOTALTIME=$(($END-$BEGIN))
+
+		echo "Build time: $TOTALTIME seconds."
+        exit 0
+        ;;
+    
+    install)
+        bootstrap_extract "$0" "$BOOTSTRAP_DATA"
+        fn="module_${INSTALL_MODULE}"
+        $fn install
+        rm -rf $BOOTSTRAP_DATA
+        exit 0
+        ;;
+        
+    extract)
+        if [ ! -d $EXTRACT_LOCATION ]
+        then
+            echo "$EXTRACT_LOCATION is not a directory."
+            exit 1
+        fi
+        
+        bootstrap_extract "$0" $(readlink -f $EXTRACT_LOCATION)
+        ;;
+        
+    list-modules)
+        echo $BOOTSTRAP_MODULES
+        ;;
+        
+    *)
+        echo "I don't know how to do that."
+        exit 1
+        ;;
+esac
+
+# Cleaning up

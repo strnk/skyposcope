@@ -1,0 +1,61 @@
+#!/bin/bash
+
+source `which mini2440_init` || exit 1
+
+
+# Default parameters
+FLASHIMG=`which flashimg`   # Find flashimg in the PATH
+
+BOOT=$IMAGES_DIR/u-boot.bin
+KERNEL=$IMAGES_DIR/uImage
+
+OUTPUT=$IMAGES_DIR/nor.bin
+PART_FILE=$CONFIG_DIR/nor.part
+ZEROED='n'
+COMMANDLINE=''
+
+# Parameters parsing
+while [ $# -gt 0 ]
+do
+    case $1 in
+        --output)       OUTPUT=$2; shift;;
+        --flashimg)     FLASHIMG=$2; shift;;
+        --zero)         ZEROED="y";;
+
+        --*)
+            COMMANDLINE="$COMMANDLINE -w $1,$2";
+            shift
+            ;;
+
+        -*) echo "Unrecognized option $1"; exit 1;;
+        *)  echo "Ignoring extra data '$1'";;
+    esac
+
+    shift
+done
+
+if [[ "x$ZEROED" = "xy" ]]
+then
+    # Generating a zeroed-out image
+    dd if=/dev/zero of=$OUTPUT bs=1k count=${NOR_SIZE}k
+else
+    # flashimg binary
+    if [ ! -f "$FLASHIMG" ]
+    then
+        if [ -z $FLASHIMG ]
+        then
+            echo "flashimg was not found in the PATH. " \
+                "Use the --flashimg <path> to indicate the binary location."
+            exit 1
+        else
+            echo "Could not find flashimg binary '$FLASHIMG."
+            exit 1
+        fi
+    fi
+
+    $FLASHIMG -s ${NOR_SIZE}M -t nand -z 256 -f $OUTPUT -p $PART_FILE \
+        -w boot,$BOOT \
+        -w kernel,$KERNEL \
+        $COMMANDLINE
+fi
+

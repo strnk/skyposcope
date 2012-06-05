@@ -1,0 +1,19 @@
+#!/bin/sh
+
+## bootstrap_extract
+# $1 : File
+# $2 : Directory
+function bootstrap_extract {
+    # Create the tmp dir if needed
+    [ ! -d $2 ] && mkdir $2
+
+    # Extract data files
+    pecho "Extracting install data ... "
+    match=$(grep --text --line-number '^DATA:$' $1 | cut -d':' -f1)
+    start=$((match + 1))
+
+    tail -n +$start $1 | \
+	    tar -C $2 -xf -
+}
+
+export -f bootstrap_extract
