@@ -29,32 +29,50 @@ export ARCHIVE
 
 # Generate the payload
 [ -f $ARCHIVE ] && rm $ARCHIVE
+echo "Processing data"
 $BOOTSTRAP_SCRIPTS/pack 
+echo "done : $ARCHIVE.\n"
 
 # Shebang
 echo "#!/bin/bash" > $OUTPUT
 
 # Generate module functions
+echo "Generating modules"
 for moduleFile in `ls -1 $BOOTSTRAP_MODULES`
 do
     moduleName=`echo $moduleFile | sed "s/^[0-9]*//"`
+    echo -n "    $moduleName ... "
+    
     echo "function module_${moduleName} {" >> $OUTPUT
     tail -n +2 $BOOTSTRAP_MODULES/$moduleFile >> $OUTPUT
     echo "}\n\n" >> $OUTPUT
+    
+    echo "ok"
 done
+echo "done."
 
 # Add source scripts
+echo "Generating bootstrap functions"
 for bootstrapScript in `ls -1 $BOOTSTRAP_FUNCTIONS` 
 do
+    echo -n "    $bootstrapScript ... "
+    
     tail -n +2 $BOOTSTRAP_FUNCTIONS/$bootstrapScript >> $OUTPUT
+    
+    echo "ok".
 done
+echo "done."
 
 # Exit the shell script to prevent payload execution
 echo "exit 0" >> $OUTPUT
 
 # Payload data to embed
+echo -n "Embedding data ... "
 echo 'DATA:' >> $OUTPUT
 cat $ARCHIVE >> $OUTPUT
+echo "done."
 
 chmod a+x $OUTPUT
 rm $ARCHIVE
+
+echo "Bootstrap script is ready : $OUTPUT"
