@@ -20,6 +20,10 @@ do
             EXTRACT_LOCATION=$2;
             shift
             ;;
+            
+        --list-modules)
+            ACTION="list-modules"
+            ;;
 
         --*|-*) echo "Unrecognized option $1"; exit 1;;
         *)      echo "Ignoring extra data '$1'";;
@@ -59,8 +63,23 @@ export INSTALL_DATA
 
 case $ACTION in
     complete-bootstrap)
-        echo "Not yet implemented :)"
-        exit
+		BEGIN=$(date +%s)
+        bootstrap_extract "$0" "$INSTALL_DATA"
+        
+        for module in $BOOTSTRAP_MODULES
+        do
+            pecho "Processing module $module"
+            fn="module_${module}"
+            $fn install
+        done
+        
+        rm -rf $INSTALL_DATA
+        
+		END=$(date +%s)
+		TOTALTIME=$(($END-$BEGIN))
+
+		echo "Build time: $TOTALTIME seconds."
+        exit 0
         ;;
     
     install)
@@ -79,6 +98,10 @@ case $ACTION in
         fi
         
         bootstrap_extract "$0" $(readlink -f $EXTRACT_LOCATION)
+        ;;
+        
+    list-modules)
+        echo $BOOTSTRAP_MODULES
         ;;
         
     *)

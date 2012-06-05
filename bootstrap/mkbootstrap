@@ -38,6 +38,7 @@ echo "#!/bin/bash" > $OUTPUT
 
 # Generate module functions
 echo "Generating modules"
+MODULE_LIST=""
 for moduleFile in `ls -1 $BOOTSTRAP_MODULES`
 do
     moduleName=`echo $moduleFile | sed "s/^[0-9]*//"`
@@ -47,8 +48,11 @@ do
     tail -n +2 $BOOTSTRAP_MODULES/$moduleFile >> $OUTPUT
     echo "}\n\n" >> $OUTPUT
     
+    MODULE_LIST="$MODULE_LIST $moduleName"
     echo "ok"
 done
+
+echo "BOOTSTRAP_MODULES=\"$MODULE_LIST\"" >> $OUTPUT
 echo "done."
 
 # Add source scripts

@@ -40,7 +40,7 @@ case $1 in
         fi
         ;;
         
-    install)		
+    install)
         if [ ! -f $INSTALL_DATA/buildroot-$BUILDROOT_VERSION.tar.bz2 ]
 		then
 			pecho "Downloading buildroot ..."
@@ -67,5 +67,8 @@ case $1 in
         create_dir $BUILDROOT_DIR/patches
 		cp -v $INSTALL_DATA/patches/*.patch $BUILDROOT_DIR/patches
 		cp -v $INSTALL_DATA/patches/uClibc/*.patch $BUILDROOT_DIR/toolchain/uClibc
+		
+		cd $BUILDROOT_DIR
+		make
         ;;
 esac
