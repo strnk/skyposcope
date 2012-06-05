@@ -13,7 +13,7 @@ function create_dir {
 }
 
 function copy_data {
-    cp -rv "$INSTALL_DATA/$1" "$2"
+    cp -rv "$BOOTSTRAP_DATA/$1" "$2"
 }
 
 export -f pecho

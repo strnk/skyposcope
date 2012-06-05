@@ -32,8 +32,14 @@ export -f add_to_archive
 export -f git_patch_to_archive
 
 
-for fileScript in `find $BOOTSTRAP_MODULES -executable -type f` 
+for fileScript in `find $BOOTSTRAP_MODULES -executable -type f | sort` 
 do
-    echo "Processing data from $fileScript"
+    echo -n "    $(basename $fileScript) ... "
     $fileScript pack-files
+    
+    if [[ $? -eq 0 ]]; then
+        echo "ok."
+    else
+        echo "error !"
+    fi
 done

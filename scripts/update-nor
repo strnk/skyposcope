@@ -9,8 +9,8 @@ FLASHIMG=`which flashimg`   # Find flashimg in the PATH
 BOOT=$IMAGES_DIR/u-boot.bin
 KERNEL=$IMAGES_DIR/uImage
 
-OUTPUT=$IMAGES_DIR/nand.bin
-PART_FILE=$CONFIG_DIR/nand.part
+OUTPUT=$IMAGES_DIR/nor.bin
+PART_FILE=$CONFIG_DIR/nor.part
 ZEROED='n'
 COMMANDLINE=''
 
@@ -37,7 +37,7 @@ done
 if [[ "x$ZEROED" = "xy" ]]
 then
     # Generating a zeroed-out image
-    dd if=/dev/zero of=$OUTPUT bs=1k count=${NAND_SIZE}k
+    dd if=/dev/zero of=$OUTPUT bs=1k count=${NOR_SIZE}k
 else
     # flashimg binary
     if [ ! -f "$FLASHIMG" ]
@@ -53,7 +53,7 @@ else
         fi
     fi
 
-    $FLASHIMG -s ${NAND_SIZE}M -t nand -z $NAND_PAGE_SIZE -f $OUTPUT -p $PART_FILE \
+    $FLASHIMG -s ${NOR_SIZE}M -t nand -z 256 -f $OUTPUT -p $PART_FILE \
         -w boot,$BOOT \
         -w kernel,$KERNEL \
         $COMMANDLINE

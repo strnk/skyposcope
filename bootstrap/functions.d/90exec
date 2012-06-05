@@ -40,6 +40,7 @@ CONFIG_DIR=$MINI2440_ROOT/config
 SCRIPTS_DIR=$MINI2440_ROOT/scripts
 BOOTSTRAP_DIR=$MINI2440_ROOT/bootstrap
 BUILDROOT_DIR=$MINI2440_ROOT/buildroot
+DOWNLOAD_DIR=$MINI2440_ROOT/download
 
 export MINI2440_ROOT
 export HOST_DIR
@@ -49,6 +50,7 @@ export CONFIG_DIR
 export SCRIPTS_DIR
 export BOOTSTRAP_DIR
 export BUILDROOT_DIR
+export DOWNLOAD_DIR
 
 # Check if the install dir exists
 if [ ! -d $MINI2440_ROOT ]
@@ -58,13 +60,13 @@ then
 fi
 
 # Extract payload
-INSTALL_DATA=$(readlink -f $MINI2440_ROOT/.installdata)
-export INSTALL_DATA
+BOOTSTRAP_DATA=$(readlink -f $MINI2440_ROOT/.bootstrapdata)
+export BOOTSTRAP_DATA
 
 case $ACTION in
     complete-bootstrap)
 		BEGIN=$(date +%s)
-        bootstrap_extract "$0" "$INSTALL_DATA"
+        bootstrap_extract "$0" "$BOOTSTRAP_DATA"
         
         for module in $BOOTSTRAP_MODULES
         do
@@ -73,7 +75,7 @@ case $ACTION in
             $fn install
         done
         
-        rm -rf $INSTALL_DATA
+        rm -rf $BOOTSTRAP_DATA
         
 		END=$(date +%s)
 		TOTALTIME=$(($END-$BEGIN))
@@ -83,10 +85,10 @@ case $ACTION in
         ;;
     
     install)
-        bootstrap_extract "$0" "$INSTALL_DATA"
+        bootstrap_extract "$0" "$BOOTSTRAP_DATA"
         fn="module_${INSTALL_MODULE}"
         $fn install
-        rm -rf $INSTALL_DATA
+        rm -rf $BOOTSTRAP_DATA
         exit 0
         ;;
         

@@ -9,7 +9,7 @@ QEMU_ARM=`which qemu-system-arm`
 
 NOR_FILE=$IMAGES_DIR/nor.bin
 NAND_FILE=$IMAGES_DIR/nand.bin
-SD_FILE=$IMAGES_DIR/sd_card.bin
+SD_FILE=$IMAGES_DIR/rootfs.ext2
 
 EMUL_NOR=1
 EMUL_NAND=1
@@ -29,7 +29,7 @@ do
 
         --boot-nand|-1)  BOOT='nand';;
         --boot-nor|-2)   BOOT='nor';;
-        
+
         --qemu)         QEMU_ARM=$2; shift;;
 
         --*|-*) echo "Unrecognized option $1"; exit 1;;

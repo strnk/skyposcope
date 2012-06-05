@@ -18,7 +18,7 @@ case $1 in
         cd $QEMU_SRC_DIR
         
         pecho "Applying patch ..."
-		patch -p1 -i $INSTALL_DATA/qemu-custom.patch || exit 1
+		patch -p1 -i $BOOTSTRAP_DATA/qemu-custom.patch || exit 1
 		
         pecho "Configuring qemu ... "
 		./configure --target-list=arm-softmmu

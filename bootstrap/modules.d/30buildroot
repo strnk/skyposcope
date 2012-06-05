@@ -41,11 +41,15 @@ case $1 in
         ;;
         
     install)
-        if [ ! -f $INSTALL_DATA/buildroot-$BUILDROOT_VERSION.tar.bz2 ]
+        export BUILDROOT_DL_DIR=$DOWNLOAD_DIR
+        
+        [[ ! -d $BUILDROOT_DL_DIR ]] && mkdir $BUILDROOT_DL_DIR
+        
+        if [ ! -f $BUILDROOT_DL_DIR/buildroot-$BUILDROOT_VERSION.tar.bz2 ]
 		then
 			pecho "Downloading buildroot ..."
 			wget $BUILDROOT_DL_URL/buildroot-$BUILDROOT_VERSION.tar.bz2 \
-				-O $INSTALL_DATA/buildroot-$BUILDROOT_VERSION.tar.bz2
+				-O $BUILDROOT_DL_DIR/buildroot-$BUILDROOT_VERSION.tar.bz2
 
 			[ $? -eq 0 ] || exit 1
 		fi
@@ -53,20 +57,20 @@ case $1 in
 		pecho "Extracting buildroot ... "
         create_dir $BUILDROOT_DIR
 		tar -C $BUILDROOT_DIR --strip-components=1 \
-			-xf $INSTALL_DATA/buildroot-$BUILDROOT_VERSION.tar.bz2
+			-xf $BUILDROOT_DL_DIR/buildroot-$BUILDROOT_VERSION.tar.bz2
 
 		[ $? -eq 0 ] || exit 1
 		
 		# Copy files
 		pecho "Copying configuration files ... "
         create_dir $BUILDROOT_DIR/configs
-		cp -v $INSTALL_DATA/buildroot_configs/*.cfg $BUILDROOT_DIR/configs
+		cp -v $BOOTSTRAP_DATA/buildroot_configs/*.cfg $BUILDROOT_DIR/configs
 		cp -v $BUILDROOT_DIR/configs/buildroot.cfg $BUILDROOT_DIR/.config
 
 		pecho "Copying patches ... "
         create_dir $BUILDROOT_DIR/patches
-		cp -v $INSTALL_DATA/patches/*.patch $BUILDROOT_DIR/patches
-		cp -v $INSTALL_DATA/patches/uClibc/*.patch $BUILDROOT_DIR/toolchain/uClibc
+		cp -v $BOOTSTRAP_DATA/patches/*.patch $BUILDROOT_DIR/patches
+		cp -v $BOOTSTRAP_DATA/patches/uClibc/*.patch $BUILDROOT_DIR/toolchain/uClibc
 		
 		cd $BUILDROOT_DIR
 		make
