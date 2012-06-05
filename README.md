@@ -76,13 +76,13 @@ or download a bootstrap executable (see previous part) and run the following com
 ## Using the development environment
 ***
 
-   The development environment configures itself for proper work. Simply run the script located
+  The development environment configures itself for proper work. Simply run the script located
 in `<skyposcope>/scripts/mini2440_sh`. This launch a new shell so the mini2440 dev. scripts won't 
 mess your user's environment.
 
 
 ### NOR initialization
-   The first thing to do (when buildroot has finished generating the root filesystem) is to initialize
+  The first thing to do (when buildroot has finished generating the root filesystem) is to initialize
 the NOR memory file. It has to be executed only once and allows the boot script to find it. Skyposcope
 doen't use the NOR in the emulation environment ATM, so we will fill it with zeroes 
 
@@ -101,16 +101,16 @@ regenerate the NAND memory file loaded by Qemu.
 
 
 ### System boot
-   And voilà ! You can now boot the virtual mini2440
+  And voilà ! You can now boot the virtual mini2440
 
 ```
    boot -1
 ```
 
-   The `-1` switch stands for "boot on the NAND", because as stated before we don't use the NOR yet.
+  The `-1` switch stands for "boot on the NAND", because as stated before we don't use the NOR yet.
 
 ### u-boot configuration
-    If you just updated the NAND, you certainly have to initialize the bootloader. Type the following
+  If you just updated the NAND, you certainly have to initialize the bootloader. Type the following
 commands at the u-boot prompt to initialize it properly
 
 ```
@@ -122,14 +122,14 @@ commands at the u-boot prompt to initialize it properly
     reset
 ```
   
-    The first command `dynenv set env` tells u-boot to use the partition _env_ to store its environment
+  The first command `dynenv set env` tells u-boot to use the partition _env_ to store its environment
 variables. The first `saveenv` allows to initialize this partition with u-boot data. The two following
 `setenv` calls defines environment variables values : `bootcmd` is the command executed by default by
 u-boot after `bootdelay` seconds, this enables auto-boot. Our boot command tells in face u-boot to load
 our kernel uImage (`nboot`) from the `kernel` partition into the memory, `bootm` then execute this part
 of the memory. 
 
-    The arguments passed to the kernel upon execution are stored into the `bootargs` environment variable,
+  The arguments passed to the kernel upon execution are stored into the `bootargs` environment variable,
 we tell the kernel to look to the root file-system on the /dev/mmcblk0 device which is the SD card device.
 Our SD card is not partitioned, we only have the whole rootfs partition on it so we dont specify any 
 partition : if it was not the case, /dev/mmcblk0pN where N is the partition number would do the trick. The
