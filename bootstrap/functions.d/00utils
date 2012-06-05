@@ -12,8 +12,12 @@ function create_dir {
     [ ! -d "$@" ] && mkdir "$@"
 }
 
+function create_link {
+    [ ! -e "$2" ] && ln -s "$1" "$2"
+}
+
 function copy_data {
-    cp -rv "$BOOTSTRAP_DATA/$1" "$2"
+    cp -frv "$BOOTSTRAP_DATA/$1" "$2"
 }
 
 export -f pecho

@@ -15,8 +15,8 @@ case $1 in
         copy_data scripts $MINI2440_ROOT
         copy_data bootstrap $MINI2440_ROOT
         
-        ln -s buildroot/output/host $MINI2440_ROOT/host
-        ln -s buildroot/output/images $MINI2440_ROOT/images
-        ln -s buildroot/output/target $MINI2440_ROOT/target
+        create_link buildroot/output/host $MINI2440_ROOT/host
+        create_link buildroot/output/images $MINI2440_ROOT/images
+        create_link buildroot/output/target $MINI2440_ROOT/target
         ;;
 esac

@@ -1,0 +1,43 @@
+#!/bin/bash
+
+source `which mini2440_init` || exit 1
+
+
+# Default parameters
+FULL='n'
+REBUILD='n'
+COMMANDLINE=''
+
+# Parameters parsing
+while [ $# -gt 0 ]
+do
+    case $1 in
+        --full)       FULL="y";;
+        --rebuild)   REBUILD="y";;
+
+        --*|-*) echo "Unrecognized option $1"; exit 1;;
+        *)  echo "Ignoring extra data '$1'";;
+    esac
+
+    shift
+done
+
+if [[ "x$FULL" = "xy" ]]
+then
+    # Cleanup the rootfs first
+    echo "Clearing target rootfs ..."
+    rm -rf $BUILDROOT_DIR/output/target/*
+    cp -r $BUILDROOT_DIR/fs/skeleton/* $BUILDROOT_DIR/output/target/
+    echo "Clearing installation stamps ..."
+    find $BUILDROOT_DIR/output -name ".stamp_target_installed" -delete
+    
+    if [[ "x$REBUILD" = "xy" ]]
+    then
+        echo "Clearing staging build stamps ..."
+        find $BUILDROOT_DIR/output -name ".stamp_staging_installed" -delete
+    fi
+fi
+
+cd $BUILDROOT_DIR
+make
+
