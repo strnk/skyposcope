@@ -101,8 +101,6 @@ echo 'DATA:' >> $OUTPUT
 cat $XARCHIVE >> $OUTPUT
 echo "done."
 
-chmod a+x $OUTPUT
-rm $XARCHIVE
 
 # Generate the real script with checksum
 echo "#!/bin/bash" > $OUTPUT_FINAL
@@ -112,4 +110,6 @@ echo "# $checksum" >> $OUTPUT_FINAL
 cat $OUTPUT >> $OUTPUT_FINAL
 
 rm $OUTPUT
+rm $XARCHIVE
+chmod a+x $OUTPUT_FINAL
 echo "Bootstrap script is ready : $OUTPUT_FINAL"

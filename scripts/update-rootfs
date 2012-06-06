@@ -8,6 +8,31 @@ FULL='n'
 REBUILD='n'
 COMMANDLINE=''
 
+if [[ -e $BUILDROOT_DIR/.config ]]
+then
+    defaultSkel=$(grep "BR2_ROOTFS_SKELETON_DEFAULT" $BUILDROOT_DIR/.config | cut -d"=" -f 2)
+    customSkel=$(grep "BR2_ROOTFS_SKELETON_CUSTOM_PATH" $BUILDROOT_DIR/.config | cut -d"=" -f 2 | sed "s/\"//g")
+    
+    if [[ $defaultSkel = "y" ]]
+    then
+        BR_SOURCE_SKEL=$BUILDROOT_DIR/fs/skeleton
+    else
+        BR_SOURCE_SKEL=$customSkel
+    fi
+    
+    cd $BUILDROOT_DIR
+    BR_SOURCE_SKEL=$(readlink -f $BR_SOURCE_SKEL)
+else
+    echo "Failed to retrieve buildroot configuration. Is it installed ?"
+    exit 1
+fi
+
+if [[ -z $BR_SOURCE_SKEL || ! -d $BR_SOURCE_SKEL ]]
+then
+    echo "Could not find source skeleton $BR_SOURCE_SKEL, check you buildroot config"
+    exit
+fi
+
 # Parameters parsing
 while [ $# -gt 0 ]
 do
