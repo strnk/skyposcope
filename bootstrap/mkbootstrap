@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 BOOTSTRAP_SCRIPTS=$BOOTSTRAP_DIR/scripts
 BOOTSTRAP_FUNCTIONS=$BOOTSTRAP_DIR/functions.d
@@ -13,7 +13,8 @@ ARCHIVE=test.tar.bz2
 
 
 # Canonicalize vars
-OUTPUT=$(readlink -f $OUTPUT)
+OUTPUT_FINAL=$(readlink -f $OUTPUT)
+OUTPUT=$(readlink -f $OUTPUT.tmp)
 ARCHIVE=$(readlink -f $ARCHIVE)
 
 export BOOTSTRAP_DIR
@@ -31,10 +32,10 @@ export ARCHIVE
 [ -f $ARCHIVE ] && rm $ARCHIVE
 echo "Processing data"
 $BOOTSTRAP_SCRIPTS/pack 
-echo "done : $ARCHIVE.\n"
+echo "done : $ARCHIVE."
 
 # Shebang
-echo "#!/bin/bash" > $OUTPUT
+echo "" > $OUTPUT
 
 # Generate module functions
 echo "Generating modules"
@@ -46,13 +47,35 @@ do
     
     echo "function module_${moduleName} {" >> $OUTPUT
     tail -n +2 $BOOTSTRAP_MODULES/$moduleFile >> $OUTPUT
-    echo "}\n\n" >> $OUTPUT
+    echo -e "}\n\n" >> $OUTPUT
     
     MODULE_LIST="$MODULE_LIST $moduleName"
     echo "ok"
 done
+echo "done."
 
+# Self-information
+echo -n "Generating self-information ..."
 echo "BOOTSTRAP_MODULES=\"$MODULE_LIST\"" >> $OUTPUT
+
+git --work-tree $MINI2440_ROOT --git-dir $MINI2440_ROOT/.git/ status 1>/dev/null 2>/dev/null
+if [[ $? -ne 0 ]]
+then
+    BOOTSTRAP_SCRIPT_VERSION="skyposcope-unknown"
+    BOOTSTRAP_SCRIPT_BRANCH="custom"
+    BOOTSTRAP_SCRIPT_AUTHOR="$(whoami)@$(hostname)"
+else
+    BOOTSTRAP_SCRIPT_VERSION=`git --git-dir $MINI2440_ROOT/.git describe --tags 2>/dev/null`
+    BOOTSTRAP_SCRIPT_AUTHOR="$(git config user.name) ($(git config user.email))"
+    
+    cBranch=$(git branch | grep "*")
+    BOOTSTRAP_SCRIPT_BRANCH=${cBranch/* /}
+fi
+
+echo "BOOTSTRAP_SCRIPT_VERSION=\"${BOOTSTRAP_SCRIPT_VERSION}\"" >> $OUTPUT
+echo "BOOTSTRAP_SCRIPT_BRANCH=\"${BOOTSTRAP_SCRIPT_BRANCH}\"" >> $OUTPUT
+echo "BOOTSTRAP_SCRIPT_AUTHOR=\"${BOOTSTRAP_SCRIPT_AUTHOR}\"" >> $OUTPUT
+echo "BOOTSTRAP_SCRIPT_DATE=\"$(LC_ALL=C date)\"" >> $OUTPUT
 echo "done."
 
 # Add source scripts
@@ -79,4 +102,12 @@ echo "done."
 chmod a+x $OUTPUT
 rm $ARCHIVE
 
-echo "Bootstrap script is ready : $OUTPUT"
+# Generate the real script with checksum
+echo "#!/bin/bash" > $OUTPUT_FINAL
+
+checksum=$(md5sum $OUTPUT | cut -d" " -f1)
+echo "# $checksum" >> $OUTPUT_FINAL
+cat $OUTPUT >> $OUTPUT_FINAL
+
+rm $OUTPUT
+echo "Bootstrap script is ready : $OUTPUT_FINAL"

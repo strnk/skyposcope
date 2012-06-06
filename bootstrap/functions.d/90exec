@@ -21,8 +21,20 @@ do
             shift
             ;;
             
-        --list-modules)
-            ACTION="list-modules"
+        --list-modules|--info)
+            ACTION="info"
+            ;;
+            
+        --version)
+            ACTION="version"
+            ;;
+            
+        --help)
+            ACTION="help"
+            ;;
+            
+        --check|--check-integrity)
+            ACTION="check"
             ;;
 
         --*|-*) echo "Unrecognized option $1"; exit 1;;
@@ -92,6 +104,23 @@ case $ACTION in
         exit 0
         ;;
         
+        
+    check)
+        this_checksum=$(tail -n +2 $0 | head -1 | cut -d" " -f2)
+        calculated_checksum=$(tail -n +3 $0 | md5sum | cut -d" " -f1)
+        
+        if [[ "$this_checksum" != "$calculated_checksum" ]]
+        then
+            echo "Checksums don't match :"
+            echo "  script:     $this_checksum"
+            echo "  calculated: $calculated_checksum"
+            exit 1
+        else
+            echo "Checksum match !"
+            exit 0
+        fi
+        ;;
+        
     extract)
         if [ ! -d $EXTRACT_LOCATION ]
         then
@@ -102,8 +131,33 @@ case $ACTION in
         bootstrap_extract "$0" $(readlink -f $EXTRACT_LOCATION)
         ;;
         
-    list-modules)
-        echo $BOOTSTRAP_MODULES
+    info)
+        echo "Version: $BOOTSTRAP_SCRIPT_VERSION ($BOOTSTRAP_SCRIPT_BRANCH)"
+        echo "Author:  $BOOTSTRAP_SCRIPT_AUTHOR"
+        echo "Date:    $BOOTSTRAP_SCRIPT_DATE"
+        echo "Compiled-in modules:"
+        
+        for m in $BOOTSTRAP_MODULES
+        do
+            echo "   * $m"
+        done
+        ;;
+        
+    version)
+        echo "$BOOTSTRAP_SCRIPT_VERSION ($BOOTSTRAP_SCRIPT_BRANCH)"
+        ;;
+        
+    help)
+        echo "Usage: $0 [options]"
+        echo "Options:"
+        echo "  --help                 show this help"
+        echo "  --version              display the current script version"
+        echo "  --info                 print various information about this script"
+        echo "  --root=ROOT            use ROOT as the target directory for bootstrapping "
+        echo "                         (default: current dir.)"
+        echo "  --extract-data=DIR     only extract the payload into the directory DIR."
+        echo "  --install=MODULE       run the installation job for the module MODULE"
+        echo ""
         ;;
         
     *)
