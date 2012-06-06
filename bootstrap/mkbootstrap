@@ -9,7 +9,8 @@ BOOTSTRAP_MODULES=$BOOTSTRAP_DIR/modules.d
 #
 
 OUTPUT=$1
-ARCHIVE=test.tar.bz2
+ARCHIVE=test.tar
+XARCHIVE=test.tar.bz2
 
 
 # Canonicalize vars
@@ -31,8 +32,9 @@ export ARCHIVE
 # Generate the payload
 [ -f $ARCHIVE ] && rm $ARCHIVE
 echo "Processing data"
-$BOOTSTRAP_SCRIPTS/pack 
-echo "done : $ARCHIVE."
+$BOOTSTRAP_SCRIPTS/pack
+bzip2 $ARCHIVE
+echo "done : $XARCHIVE."
 
 # Shebang
 echo "" > $OUTPUT
@@ -96,11 +98,11 @@ echo "exit 0" >> $OUTPUT
 # Payload data to embed
 echo -n "Embedding data ... "
 echo 'DATA:' >> $OUTPUT
-cat $ARCHIVE >> $OUTPUT
+cat $XARCHIVE >> $OUTPUT
 echo "done."
 
 chmod a+x $OUTPUT
-rm $ARCHIVE
+rm $XARCHIVE
 
 # Generate the real script with checksum
 echo "#!/bin/bash" > $OUTPUT_FINAL
